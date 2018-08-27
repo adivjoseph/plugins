@@ -198,6 +198,36 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 	defer netns.Close()
 	
+	// Get the list of interfaces in the namespace
+        var nsInterfaces []net.Interface
+        err = netns.Do(func(_ ns.NetNS) error{
+	    ifaces, err := net.Interfaces()
+               if err != nil {
+                  log.WithFields(logrus.Fields{
+                     "err": err,
+                  }).Info("PTP cmdAdd()->net.Interfaces")
+                  return err
+              }
+              nsInterfaces = ifaces
+	      return nil
+	})
+	if err != nil {
+		return  err
+	}
+    	// If interface exits donnot do anything just exit	
+    	err = nil
+    	for _, i := range nsInterfaces {
+        	if (i.Name == args.IfName) {
+                	err = errors.New("Dupplicate IFName")
+        	}
+    	}
+    
+    	// Check if add should proceed
+    	if (err != nil){
+       		return err
+    	}
+
+	
 	// run the IPAM plugin and get back the config to apply
 	r, err := ipam.ExecAdd(conf.IPAM.Type, args.StdinData)
 	if err != nil {
