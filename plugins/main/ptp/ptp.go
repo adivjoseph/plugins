@@ -191,7 +191,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err := json.Unmarshal(args.StdinData, &conf); err != nil {
 		return fmt.Errorf("failed to load netconf: %v", err)
 	}
-
+	// First make sure the the network names space exits
+	netns, err := ns.GetNS(args.Netns)
+	if err != nil {
+		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
+	}
+	defer netns.Close()
+	
 	// run the IPAM plugin and get back the config to apply
 	r, err := ipam.ExecAdd(conf.IPAM.Type, args.StdinData)
 	if err != nil {
@@ -211,11 +217,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("Could not enable IP forwarding: %v", err)
 	}
 
-	netns, err := ns.GetNS(args.Netns)
-	if err != nil {
-		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
-	}
-	defer netns.Close()
+	
 
 	hostInterface, containerInterface, err := setupContainerVeth(netns, args.IfName, conf.MTU, result)
 	if err != nil {
